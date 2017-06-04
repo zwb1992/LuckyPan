@@ -37,6 +37,8 @@ public class LuckyPan extends SurfaceView implements SurfaceHolder.Callback {
     private float mStartAngle = 0;
     private float textSize = 16;
     private int mRadius;
+    private int mSpped = 0;//旋转速度，大于0就旋转
+    private boolean isShouldEnd = false;//是否需要停止
 
     public LuckyPan(Context context) {
         this(context, null);
@@ -87,7 +89,7 @@ public class LuckyPan extends SurfaceView implements SurfaceHolder.Callback {
         new Thread() {
             @Override
             public void run() {
-                if (isInit) {
+                while (isInit) {
                     long start = System.currentTimeMillis();
                     draw();
                     long end = System.currentTimeMillis();
@@ -99,7 +101,7 @@ public class LuckyPan extends SurfaceView implements SurfaceHolder.Callback {
 
                         }
                     }
-                    mStartAngle++;
+                    mStartAngle += mSpped;
                 }
             }
         }.start();
@@ -141,7 +143,12 @@ public class LuckyPan extends SurfaceView implements SurfaceHolder.Callback {
                 surfaceHolder.unlockCanvasAndPost(canvas);
             }
         }
-
+        if(isShouldEnd){
+            mSpped --;
+        }
+        if(mSpped <= 0){
+            mSpped = 0;
+        }
     }
 
     /**
@@ -185,4 +192,24 @@ public class LuckyPan extends SurfaceView implements SurfaceHolder.Callback {
         canvas.drawBitmap(bitmap,null,rect,null);
     }
 
+    /**
+     * 是否还在旋转
+     * @return
+     */
+    public boolean isStart(){
+        return mSpped != 0;
+    }
+
+    public void end(){
+        isShouldEnd = true;
+    }
+
+    public void start() {
+        mSpped = 50;
+        isShouldEnd = false;
+    }
+
+    public boolean isShouldEnd(){
+        return isShouldEnd;
+    }
 }
