@@ -11,7 +11,10 @@ import android.graphics.Rect;
 import android.graphics.RectF;
 import android.support.v4.content.ContextCompat;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.util.TypedValue;
+import android.view.GestureDetector;
+import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 
@@ -37,8 +40,12 @@ public class LuckyPan extends SurfaceView implements SurfaceHolder.Callback {
     private float mStartAngle = 0;
     private float textSize = 16;
     private int mRadius;
-    private int mSpped = 0;//旋转速度，大于0就旋转
+    private int mSpeed = 0;//旋转速度，大于0就旋转
     private boolean isShouldEnd = false;//是否需要停止
+    private Bitmap mStartBitmap, mEndBitmap;
+    private int mButtonRadius;//中间按钮的半径，以宽高德最小值为主
+    private GestureDetector gestureDetector;
+    private boolean drawStart = true;//绘制开始的图片
 
     public LuckyPan(Context context) {
         this(context, null);
@@ -66,6 +73,30 @@ public class LuckyPan extends SurfaceView implements SurfaceHolder.Callback {
         mTextPaint.setTextSize(textSize);
         surfaceHolder = getHolder();
         surfaceHolder.addCallback(this);
+        gestureDetector = new GestureDetector(context, new GestureDetector.SimpleOnGestureListener() {
+            @Override
+            public boolean onSingleTapConfirmed(MotionEvent e) {
+                float x = e.getX();
+                float y = e.getY();
+                Log.e("info","---x---"+x);
+                Log.e("info","---y---"+y);
+                Log.e("info","---mButtonRadius---"+mButtonRadius);
+                Log.e("info","---sqrt---"+Math.sqrt((mRadius - x) * (mRadius - x)+(mRadius - y)*(mRadius - y)));
+                //如果点击的区域在按钮内部
+                if(Math.sqrt((mRadius - x) * (mRadius - x)+(mRadius - y)*(mRadius - y)) < mButtonRadius){
+                    if(isStart()){
+                        if(!isShouldEnd()) {
+                            end();
+                            drawStart = true;
+                        }
+                    }else {
+                        start();
+                        drawStart = false;
+                    }
+                }
+                return true;
+            }
+        });
     }
 
     @Override
@@ -76,12 +107,15 @@ public class LuckyPan extends SurfaceView implements SurfaceHolder.Callback {
         int size = Math.min(w, h);
         setMeasuredDimension(size, size);
         rect = new RectF(0, 0, getMeasuredWidth(), getMeasuredHeight());
-        mRadius = getMeasuredWidth() / 2;
+        mRadius = getMeasuredWidth() / 2 ;
     }
 
     @Override
     public void surfaceCreated(SurfaceHolder holder) {
         isInit = true;
+        mStartBitmap = BitmapFactory.decodeResource(getResources(), R.mipmap.start);
+        mEndBitmap = BitmapFactory.decodeResource(getResources(), R.mipmap.stop);
+        mButtonRadius = Math.min(mStartBitmap.getWidth(), mStartBitmap.getHeight())- 100;//按钮有部分透明快
         bitmaps = new Bitmap[imgs.length];
         for (int i = 0; i < bitmaps.length; i++) {
             bitmaps[i] = BitmapFactory.decodeResource(getResources(), imgs[i]);
@@ -101,7 +135,7 @@ public class LuckyPan extends SurfaceView implements SurfaceHolder.Callback {
 
                         }
                     }
-                    mStartAngle += mSpped;
+                    mStartAngle += mSpeed;
                 }
             }
         }.start();
@@ -131,11 +165,10 @@ public class LuckyPan extends SurfaceView implements SurfaceHolder.Callback {
                 mPaint.setColor(ContextCompat.getColor(getContext(), colors[i]));
                 drawArea(rect, tempAngle, sweepAngle, canvas);
                 drawText(rect, tempAngle, sweepAngle, contents[i], canvas);
-                drawIcon(tempAngle,canvas,bitmaps[i]);
+                drawIcon(tempAngle, canvas, bitmaps[i]);
                 tempAngle += sweepAngle;
             }
-// canvas.drawBitmap(bitmaps[0], 0, 0, null);
-//        canvas.drawBitmap(bitmaps[0], null, rect, null);
+            drawButton(canvas);
         } catch (Exception e) {
             e.printStackTrace();
         } finally {
@@ -143,11 +176,11 @@ public class LuckyPan extends SurfaceView implements SurfaceHolder.Callback {
                 surfaceHolder.unlockCanvasAndPost(canvas);
             }
         }
-        if(isShouldEnd){
-            mSpped --;
+        if (isShouldEnd) {
+            mSpeed--;
         }
-        if(mSpped <= 0){
-            mSpped = 0;
+        if (mSpeed <= 0) {
+            mSpeed = 0;
         }
     }
 
@@ -179,7 +212,7 @@ public class LuckyPan extends SurfaceView implements SurfaceHolder.Callback {
      * @param startAngle
      * @param canvas
      */
-    private void drawIcon(float startAngle, Canvas canvas,Bitmap bitmap) {
+    private void drawIcon(float startAngle, Canvas canvas, Bitmap bitmap) {
         int imgWidth = mRadius / 4;//图片的宽度为半径的四分之一
 
         //角度为起始角度加上每个区域角度的一半
@@ -189,27 +222,51 @@ public class LuckyPan extends SurfaceView implements SurfaceHolder.Callback {
 
         //确定图片的位置 x,y 为图片的中心
         Rect rect = new Rect(x - imgWidth / 2, y - imgWidth / 2, x + imgWidth / 2, y + imgWidth / 2);
-        canvas.drawBitmap(bitmap,null,rect,null);
+        canvas.drawBitmap(bitmap, null, rect, null);
+    }
+
+    private void drawButton(Canvas canvas) {
+        if (drawStart) {
+            int w = mStartBitmap.getWidth();
+            int h = mStartBitmap.getHeight();
+            int dx = mRadius - w / 2;
+            int dy = mRadius - h / 2;
+            canvas.drawBitmap(mStartBitmap, dx, dy, null);
+        } else {
+            int w = mEndBitmap.getWidth();
+            int h = mEndBitmap.getHeight();
+            int dx = mRadius - w / 2;
+            int dy = mRadius - h / 2;
+            canvas.drawBitmap(mEndBitmap, dx, dy, null);
+        }
     }
 
     /**
      * 是否还在旋转
+     *
      * @return
      */
-    public boolean isStart(){
-        return mSpped != 0;
+    public boolean isStart() {
+        return mSpeed != 0;
     }
 
-    public void end(){
+    public void end() {
         isShouldEnd = true;
     }
 
     public void start() {
-        mSpped = 50;
+        mSpeed = 50;
         isShouldEnd = false;
     }
 
-    public boolean isShouldEnd(){
+    public boolean isShouldEnd() {
         return isShouldEnd;
     }
+
+    @Override
+    public boolean onTouchEvent(MotionEvent event) {
+        gestureDetector.onTouchEvent(event);
+        return true;
+    }
+
 }
