@@ -37,10 +37,10 @@ public class LuckyPan extends SurfaceView implements SurfaceHolder.Callback {
     private Paint mTextPaint;
     private RectF rect;
     private int mCount = 6;
-    private float mStartAngle = 0;
+    private volatile float mStartAngle = 0;
     private float textSize = 16;
     private int mRadius;
-    private int mSpeed = 0;//旋转速度，大于0就旋转
+    private double mSpeed = 0;//旋转速度，大于0就旋转
     private boolean isShouldEnd = false;//是否需要停止
     private Bitmap mStartBitmap, mEndBitmap;
     private int mButtonRadius;//中间按钮的半径，以宽高德最小值为主
@@ -78,19 +78,19 @@ public class LuckyPan extends SurfaceView implements SurfaceHolder.Callback {
             public boolean onSingleTapConfirmed(MotionEvent e) {
                 float x = e.getX();
                 float y = e.getY();
-                Log.e("info","---x---"+x);
-                Log.e("info","---y---"+y);
-                Log.e("info","---mButtonRadius---"+mButtonRadius);
-                Log.e("info","---sqrt---"+Math.sqrt((mRadius - x) * (mRadius - x)+(mRadius - y)*(mRadius - y)));
+                Log.e("info", "---x---" + x);
+                Log.e("info", "---y---" + y);
+                Log.e("info", "---mButtonRadius---" + mButtonRadius);
+                Log.e("info", "---sqrt---" + Math.sqrt((mRadius - x) * (mRadius - x) + (mRadius - y) * (mRadius - y)));
                 //如果点击的区域在按钮内部
-                if(Math.sqrt((mRadius - x) * (mRadius - x)+(mRadius - y)*(mRadius - y)) < mButtonRadius){
-                    if(isStart()){
-                        if(!isShouldEnd()) {
+                if (Math.sqrt((mRadius - x) * (mRadius - x) + (mRadius - y) * (mRadius - y)) < mButtonRadius) {
+                    if (isStart()) {
+                        if (!isShouldEnd()) {
                             end();
                             drawStart = true;
                         }
-                    }else {
-                        start();
+                    } else {
+                        start(0);
                         drawStart = false;
                     }
                 }
@@ -107,7 +107,7 @@ public class LuckyPan extends SurfaceView implements SurfaceHolder.Callback {
         int size = Math.min(w, h);
         setMeasuredDimension(size, size);
         rect = new RectF(0, 0, getMeasuredWidth(), getMeasuredHeight());
-        mRadius = getMeasuredWidth() / 2 ;
+        mRadius = getMeasuredWidth() / 2;
     }
 
     @Override
@@ -115,7 +115,7 @@ public class LuckyPan extends SurfaceView implements SurfaceHolder.Callback {
         isInit = true;
         mStartBitmap = BitmapFactory.decodeResource(getResources(), R.mipmap.start);
         mEndBitmap = BitmapFactory.decodeResource(getResources(), R.mipmap.stop);
-        mButtonRadius = Math.min(mStartBitmap.getWidth(), mStartBitmap.getHeight())- 100;//按钮有部分透明快
+        mButtonRadius = Math.min(mStartBitmap.getWidth(), mStartBitmap.getHeight()) - 100;//按钮有部分透明快
         bitmaps = new Bitmap[imgs.length];
         for (int i = 0; i < bitmaps.length; i++) {
             bitmaps[i] = BitmapFactory.decodeResource(getResources(), imgs[i]);
@@ -181,6 +181,7 @@ public class LuckyPan extends SurfaceView implements SurfaceHolder.Callback {
         }
         if (mSpeed <= 0) {
             mSpeed = 0;
+            isShouldEnd = false;
         }
     }
 
@@ -251,11 +252,26 @@ public class LuckyPan extends SurfaceView implements SurfaceHolder.Callback {
     }
 
     public void end() {
+        mStartAngle = 0;
         isShouldEnd = true;
     }
 
-    public void start() {
-        mSpeed = 50;
+    /**
+     * 指定中奖的内容
+     *
+     * @param index 指定项
+     */
+    public void start(int index) {
+        float angle = 360.0f / mCount;
+        float from = 270 - (index + 1) * angle;
+        float end = from + angle;
+
+        float fromAngle = 4 * 360 + from;
+        float endAngle = 4 * 360 + end;
+        double v1 = ((-1 + Math.sqrt(1 + 8 * fromAngle)) / 2);
+        double v2 = ((-1 + Math.sqrt(1 + 8 * endAngle)) / 2);
+        mSpeed = v1 + Math.random() * (v2 - v1);
+//        mSpeed = v2;
         isShouldEnd = false;
     }
 

@@ -15,13 +15,4 @@ public class MainActivity extends AppCompatActivity {
         luckyPan = (LuckyPan)findViewById(R.id.luckyPan);
     }
 
-    public void start(View view){
-        if(luckyPan.isStart()){
-            if(!luckyPan.isShouldEnd()) {
-                luckyPan.end();
-            }
-        }else {
-            luckyPan.start();
-        }
-    }
 }

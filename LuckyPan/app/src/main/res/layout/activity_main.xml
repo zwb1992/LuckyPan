@@ -7,11 +7,6 @@
     android:background="#fff"
     tools:context="com.zwb.luckypan.MainActivity">
 
-    <Button
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:onClick="start"
-        android:text="开始" />
 
     <com.zwb.luckypan.view.LuckyPan
         android:id="@+id/luckyPan"
